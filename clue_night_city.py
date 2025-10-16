@@ -81,7 +81,7 @@ class ClueGameGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Clue: Night City Protocol")
-        self.root.geometry("850x750")
+        self.root.geometry("850x700")
         self.root.config(bg="#101010")
 
         style = ttk.Style()
@@ -119,10 +119,23 @@ class ClueGameGUI:
         self.text_area.pack(pady=10)
         self.text_area.insert("end", self.get_intro_text())
 
+        # Botón continuar
         self.cont_button = ttk.Button(root, text="Continuar", width=20, command=self.show_main_options)
         self.cont_button.pack(pady=5)
 
+        # Frame botones investigación
         self.button_frame = tk.Frame(root, bg="#101010")
+
+        # Frame acciones
+        self.action_frame = tk.Frame(self.root, bg="#101010")
+        self.action_frame.pack(pady=10)
+        ttk.Button(self.action_frame, text="Ver Pistas", width=20, command=self.show_pistas).grid(row=0, column=0, padx=5)
+        ttk.Button(self.action_frame, text="Hacer Acusación", width=20, command=self.toggle_accusation).grid(row=0, column=1, padx=5)
+        ttk.Button(self.action_frame, text="Salir del Juego", width=20, command=self.root.quit).grid(row=0, column=2, padx=5)
+
+    # ========================
+    # INICIALIZAR JUEGO
+    # ========================
 
     def initialize_game(self):
         self.culprit = random.choice(SUSPECTS)
@@ -133,6 +146,12 @@ class ClueGameGUI:
         self.turns = 0
         self.max_turns = 10
         self.intro_shown = False
+        if hasattr(self, 'acc_frame') and self.acc_frame.winfo_exists():
+            self.acc_frame.destroy()
+
+    # ========================
+    # TEXTO INTRODUCTORIO
+    # ========================
 
     def get_intro_text(self):
         return textwrap.dedent("""
@@ -161,46 +180,40 @@ class ClueGameGUI:
         Presiona "Continuar" para comenzar.
         """)
 
-    # ==========================
-    # OPCIONES PRINCIPALES
-    # ==========================
+    # ========================
+    # MOSTRAR OPCIONES PRINCIPALES
+    # ========================
 
     def show_main_options(self):
         if self.intro_shown:
             return
         self.intro_shown = True
-        self.cont_button.destroy()
+        if hasattr(self, 'cont_button') and self.cont_button.winfo_exists():
+            self.cont_button.destroy()
 
         self.text_area.delete("1.0", "end")
         self.text_area.insert("end", "Investiga las áreas o sospechosos para recolectar pistas y resolver el misterio.\n")
 
-        # Botones de áreas
+        # Botones investigación
         self.button_frame.pack(pady=10)
         tk.Label(self.button_frame, text="Áreas:", fg="#00ffe7", bg="#101010", font=("Consolas", 12, "bold")).pack(pady=5)
         for area in AREAS:
             btn = ttk.Button(self.button_frame, text=area, width=25, command=lambda a=area: self.enter_area(a))
             btn.pack(pady=2)
 
-        # Separación para sospechosos
         tk.Label(self.button_frame, text="Sospechosos:", fg="#00ffe7", bg="#101010", font=("Consolas", 12, "bold")).pack(pady=5)
         for suspect in SUSPECTS:
-            btn = ttk.Button(self.button_frame, text=f"Investigar a {suspect}", width=25, command=lambda s=suspect: self.enter_suspect(s))
+            btn = ttk.Button(self.button_frame, text=f"Investigar a {suspect}", width=25,
+                             command=lambda s=suspect: self.enter_suspect(s))
             btn.pack(pady=2)
 
-        # Acciones
-        action_frame = tk.Frame(self.root, bg="#101010")
-        action_frame.pack(pady=10)
-        ttk.Button(action_frame, text="Ver Pistas", width=20, command=self.show_pistas).grid(row=0, column=0, padx=5)
-        ttk.Button(action_frame, text="Hacer Acusación", width=20, command=self.toggle_accusation).grid(row=0, column=1, padx=5)
-        ttk.Button(action_frame, text="Salir del Juego", width=20, command=self.root.quit).grid(row=0, column=2, padx=5)
-
-    # ==========================
+    # ========================
     # INVESTIGAR ÁREA O SOSPECHOSO
-    # ==========================
+    # ========================
 
     def enter_area(self, area):
         if self.turns >= self.max_turns:
-            messagebox.showinfo("Fin de turnos", "Has agotado todos tus movimientos. Debes hacer tu acusación ahora.")
+            self.text_area.insert("end", "\nHas agotado tus movimientos. Debes hacer tu acusación ahora.\n")
             self.disable_investigation()
             return
 
@@ -219,11 +232,12 @@ class ClueGameGUI:
         self.text_area.see("end")
 
         if self.turns >= self.max_turns:
+            self.text_area.insert("end", "\nHas agotado tus movimientos. Debes hacer tu acusación ahora.\n")
             self.disable_investigation()
 
     def enter_suspect(self, suspect):
         if self.turns >= self.max_turns:
-            messagebox.showinfo("Fin de turnos", "Has agotado todos tus movimientos. Debes hacer tu acusación ahora.")
+            self.text_area.insert("end", "\nHas agotado tus movimientos. Debes hacer tu acusación ahora.\n")
             self.disable_investigation()
             return
 
@@ -248,29 +262,23 @@ class ClueGameGUI:
         self.text_area.see("end")
 
         if self.turns >= self.max_turns:
+            self.text_area.insert("end", "\nHas agotado tus movimientos. Debes hacer tu acusación ahora.\n")
             self.disable_investigation()
 
-    # ==========================
+    # ========================
     # MOSTRAR PISTAS
-    # ==========================
+    # ========================
 
     def show_pistas(self):
         if not self.found_clues:
             messagebox.showinfo("Pistas", "Aún no has encontrado ninguna pista.")
         else:
-            # Separar pistas de lugares y sospechosos
-            area_clues = [p for p in self.found_clues if any(area in p for area in AREAS)]
-            suspect_clues = [p for p in self.found_clues if any(s in p for s in SUSPECTS)]
-            msg = ""
-            if area_clues:
-                msg += "Pistas de Áreas:\n" + "\n".join(f"- {p}" for p in area_clues) + "\n\n"
-            if suspect_clues:
-                msg += "Pistas de Sospechosos:\n" + "\n".join(f"- {p}" for p in suspect_clues)
-            messagebox.showinfo("Pistas Encontradas", msg)
+            pistas = "\n".join(f"- {p}" for p in self.found_clues)
+            messagebox.showinfo("Pistas Encontradas", pistas)
 
-    # ==========================
+    # ========================
     # ACUSACIÓN PLEGABLE
-    # ==========================
+    # ========================
 
     def toggle_accusation(self):
         if hasattr(self, 'acc_frame') and self.acc_frame.winfo_exists():
@@ -297,17 +305,20 @@ class ClueGameGUI:
             canvas.pack(side="left", fill="both", expand=True)
             scrollbar.pack(side="right", fill="y")
 
-            tk.Label(scrollable_frame, text="Selecciona al Sospechoso:", bg="#101010", fg="#00ffe7", font=("Consolas", 12, "bold")).pack(pady=5)
+            tk.Label(scrollable_frame, text="Selecciona al Sospechoso:", bg="#101010", fg="#00ffe7",
+                     font=("Consolas", 12, "bold")).pack(pady=5)
             self.suspect_var = tk.StringVar()
             for s in SUSPECTS:
                 ttk.Radiobutton(scrollable_frame, text=s, value=s, variable=self.suspect_var).pack(anchor="w", padx=20)
 
-            tk.Label(scrollable_frame, text="Selecciona el Arma:", bg="#101010", fg="#00ffe7", font=("Consolas", 12, "bold")).pack(pady=5)
+            tk.Label(scrollable_frame, text="Selecciona el Arma:", bg="#101010", fg="#00ffe7",
+                     font=("Consolas", 12, "bold")).pack(pady=5)
             self.weapon_var = tk.StringVar()
             for w in WEAPONS:
                 ttk.Radiobutton(scrollable_frame, text=w, value=w, variable=self.weapon_var).pack(anchor="w", padx=20)
 
-            tk.Label(scrollable_frame, text="Selecciona el Lugar:", bg="#101010", fg="#00ffe7", font=("Consolas", 12, "bold")).pack(pady=5)
+            tk.Label(scrollable_frame, text="Selecciona el Lugar:", bg="#101010", fg="#00ffe7",
+                     font=("Consolas", 12, "bold")).pack(pady=5)
             self.location_var = tk.StringVar()
             for a in AREAS:
                 ttk.Radiobutton(scrollable_frame, text=a, value=a, variable=self.location_var).pack(anchor="w", padx=20)
@@ -321,27 +332,27 @@ class ClueGameGUI:
                     return
                 correct = (suspect == self.culprit and weapon == self.weapon and location == self.location)
                 if correct:
-                    messagebox.showinfo("Victoria!", f"¡Correcto! El culpable era {self.culprit}, con {self.weapon} en {self.location}.")
+                    messagebox.showinfo("Victoria!", f"¡Correcto! El culpable era {self.culprit}, con {self.weapon} en {self.location}. Se reiniciará el juego.")
+                    self.restart_game()
                 else:
-                    messagebox.showerror("Incorrecto", "Esa acusación no es correcta.")
-                self.restart_game()
+                    messagebox.showerror("Incorrecto", "Esa acusación no es correcta. Se reiniciará el juego.")
+                    self.restart_game()
 
             ttk.Button(scrollable_frame, text="Acusar", command=acusar).pack(pady=10)
 
-    # ==========================
+    # ========================
     # DESACTIVAR BOTONES DE INVESTIGACIÓN
-    # ==========================
+    # ========================
 
     def disable_investigation(self):
-        if hasattr(self, 'button_frame') and self.button_frame.winfo_exists():
-            for child in self.button_frame.winfo_children():
-                if isinstance(child, ttk.Button):
-                    child.config(state="disabled")
+        for child in self.button_frame.winfo_children():
+            if isinstance(child, ttk.Button):
+                child.config(state="disabled")
         self.toggle_accusation()
 
-    # ==========================
+    # ========================
     # REINICIAR JUEGO
-    # ==========================
+    # ========================
 
     def restart_game(self):
         self.initialize_game()
@@ -349,11 +360,12 @@ class ClueGameGUI:
         self.text_area.insert("end", self.get_intro_text())
         if hasattr(self, 'acc_frame') and self.acc_frame.winfo_exists():
             self.acc_frame.destroy()
-        if hasattr(self, 'button_frame') and self.button_frame.winfo_exists():
-            for child in self.button_frame.winfo_children():
-                child.destroy()
+        # Limpiar botones de investigación para volver a crear
+        for child in self.button_frame.winfo_children():
+            child.destroy()
         self.cont_button = ttk.Button(self.root, text="Continuar", width=20, command=self.show_main_options)
         self.cont_button.pack(pady=5)
+
 
 # ========================
 # EJECUCIÓN DEL PROGRAMA
