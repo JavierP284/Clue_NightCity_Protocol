@@ -420,6 +420,14 @@ class ClueGameGUI:
             - Cuchillo
             - Katana
             - Pistola
+                               
+            Áreas dentro de la torre:
+            - Laboratorio Biologico
+            - Sala Seguridad
+            - Penthouse
+            - Cafetería
+            - Taller de prototipos
+                               
             Buena suerte, detective.
         """)
         
