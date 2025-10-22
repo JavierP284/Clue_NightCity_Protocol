@@ -10,8 +10,18 @@ import os
 # ========================
 
 SUSPECTS = ["Hacker", "Jefe seguridad", "Ejecutiva", "Mercenario", "Investigadora"]
-WEAPONS = ["Mantis", "Monowire", "Cuchillo", "Katana", "Pistola"]
+WEAPONS = ["Mantis Blades", "Monowire", "Cuchillo", "Katana", "Pistola"]
 AREAS = ["Laboratorio Biologico", "Sala Seguridad", "Penthouse", "Cafetería", "Taller de prototipos"]
+
+# ========================
+# PLANTILLA DE NARRATIVA
+# ========================
+NARRATIVE_TEMPLATE = (
+    "El culpable, {culprit}, fue detectado en {location}. "
+    "Usó su {weapon} para cometer el crimen. "
+    "Algunos testigos reportaron movimientos sospechosos cerca de {secondary_area}. "
+    "El hecho ocurrió durante {weather}."
+)
 
 # ========================
 # FUNCIONES PARA GENERAR PISTAS DIGERIBLES
@@ -181,20 +191,20 @@ class ClueGameGUI:
         form_frame = tk.Frame(self.acusacion_frame, bg="#0f0f1a")
         form_frame.pack(pady=10)
 
-        tk.Label(form_frame, text="Selecciona Sospechoso:", bg="#0f0f1a", fg="#00bcd4", font=("Consolas", 12)).grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        tk.Label(form_frame, text="Selecciona Sospechoso:", bg="#0f0f1a", fg="#00ffe7", font=("Consolas", 12)).grid(row=0, column=0, sticky="w", padx=5, pady=5)
         self.cb_suspect = ttk.Combobox(form_frame, values=SUSPECTS, font=("Consolas", 11), state="readonly")
         self.cb_suspect.grid(row=0, column=1, padx=5, pady=5)
 
-        tk.Label(form_frame, text="Selecciona Arma:", bg="#0f0f1a", fg="#00bcd4", font=("Consolas", 12)).grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        tk.Label(form_frame, text="Selecciona Arma:", bg="#0f0f1a", fg="#00ffe7", font=("Consolas", 12)).grid(row=1, column=0, sticky="w", padx=5, pady=5)
         self.cb_weapon = ttk.Combobox(form_frame, values=WEAPONS, font=("Consolas", 11), state="readonly")
         self.cb_weapon.grid(row=1, column=1, padx=5, pady=5)
 
-        tk.Label(form_frame, text="Selecciona Lugar:", bg="#0f0f1a", fg="#00bcd4", font=("Consolas", 12)).grid(row=2, column=0, sticky="w", padx=5, pady=5)
+        tk.Label(form_frame, text="Selecciona Lugar:", bg="#0f0f1a", fg="#00ffe7", font=("Consolas", 12)).grid(row=2, column=0, sticky="w", padx=5, pady=5)
         self.cb_location = ttk.Combobox(form_frame, values=AREAS, font=("Consolas", 11), state="readonly")
         self.cb_location.grid(row=2, column=1, padx=5, pady=5)
 
-        tk.Label(self.acusacion_frame, text="Pistas encontradas:", fg="#00bcd4", bg="#0f0f1a", font=("Consolas", 12, "bold")).pack(pady=(10,0))
-        self.acusacion_text = tk.Text(self.acusacion_frame, wrap="word", height=15, width=90, bg="#12131a", fg="#00bcd4", font=("Consolas", 11), bd=0)
+        tk.Label(self.acusacion_frame, text="Pistas encontradas:", fg="#00ffe7", bg="#0f0f1a", font=("Consolas", 12, "bold")).pack(pady=(10,0))
+        self.acusacion_text = tk.Text(self.acusacion_frame, wrap="word", height=15, width=90, bg="#12131a", fg="#00ffe7", font=("Consolas", 11), bd=0)
         self.acusacion_text.pack(pady=5, padx=10, fill="both", expand=True)
 
         ttk.Button(self.acusacion_frame, text="Hacer Acusación", command=self.make_accusation).pack(pady=8)
@@ -337,12 +347,44 @@ class ClueGameGUI:
         if not suspect or not weapon or not location:
             messagebox.showwarning("Error", "Debes seleccionar una opción de cada categoría.")
             return
+
         correct = (suspect == self.culprit and weapon == self.weapon and location == self.location)
+
+        # Generar narrativa dinámica
+        narrative = NARRATIVE_TEMPLATE.format(
+            culprit=self.culprit,
+            weapon=self.weapon,
+            location=self.location,
+            secondary_area=random.choice([a for a in AREAS if a != self.location]),
+            weather=random.choice(["una tormenta", "la noche silenciosa", "la tarde nublada"])
+        )
+
+        # Crear ventana emergente personalizada
+        result_window = tk.Toplevel(self.root)
+        result_window.title("Resultado del Caso")
+        result_window.geometry("600x400")
+        result_window.config(bg="#101010")
+        result_window.grab_set()  # Bloquea la ventana principal
+
+        title_text = "¡Victoria Detective!" if correct else "Caso Fallido"
+        title_color = "#00ff00" if correct else "#ff4040"
+
+        tk.Label(result_window, text=title_text, font=("Consolas", 20, "bold"),
+                fg=title_color, bg="#101010").pack(pady=20)
+
+        # Texto con narrativa
+        narrative_label = tk.Text(result_window, wrap="word", height=10, width=60, bg="#181c1f",
+                                fg="#00ffe7", font=("Consolas", 12), bd=2, relief="groove")
+        narrative_label.pack(pady=10, padx=10)
         if correct:
-            messagebox.showinfo("Victoria!", f"¡Correcto! El culpable era {self.culprit}, con {self.weapon} en {self.location}. Se reiniciará el juego.")
+            narrative_label.insert("end", f"¡Correcto! Has resuelto el caso.\n\n{narrative}")
         else:
-            messagebox.showerror("Incorrecto", f"Esa acusación no es correcta. El culpable era {self.culprit}, con {self.weapon} en {self.location}. Se reiniciará el juego.")
-        self.restart_game()
+            narrative_label.insert("end", f"Esa acusación no es correcta.\nEl culpable era {self.culprit}, "
+                                        f"con {self.weapon} en {self.location}.\n\n{narrative}")
+        narrative_label.config(state="disabled")
+
+        # Botón para reiniciar juego
+        ttk.Button(result_window, text="Reiniciar Juego", command=lambda: [result_window.destroy(), self.restart_game()]).pack(pady=15)
 
     # ========================
     # REINICIAR JUEGO
@@ -373,7 +415,7 @@ class ClueGameGUI:
             - Investigadora
 
             Posibles armas utilizadas:
-            - Mantis
+            - Mantis Blades
             - Monowire
             - Cuchillo
             - Katana
