@@ -119,7 +119,7 @@ class ClueGameGUI:
         logo_path = os.path.join("Images", "Logo Clue.png")
         if os.path.exists(logo_path):
             img = Image.open(logo_path)
-            img.thumbnail((550, 300))
+            img.thumbnail((450, 200))
             logo_img = ImageTk.PhotoImage(img)
             self.logo = tk.Label(self.container, image=logo_img, bg="#101010")
             self.logo.image = logo_img
