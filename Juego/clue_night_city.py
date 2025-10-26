@@ -85,7 +85,7 @@ class ClueGameGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Clue: Night City Protocol")
-        self.root.geometry("850x700") 
+        self.root.geometry("950x700") 
         self.root.config(bg="#101010")
 
         # Configuración de estilos Cyberpunk
