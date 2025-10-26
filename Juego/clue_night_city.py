@@ -26,7 +26,6 @@ NARRATIVE_TEMPLATE = (
 # ========================
 
 def clue_physical(area, weapon, is_true):
-    # Pista relacionada con rastros físicos del arma en un área.
     if is_true:
         return f"Se encontraron rastros en {area} que podrían indicar que se usó un {weapon}."
     else:
@@ -34,7 +33,6 @@ def clue_physical(area, weapon, is_true):
         return f"En {area} hay señales que parecen de un {other}, pero no es concluyente."
 
 def clue_access(area, culprit, is_true):
-    # Pista relacionada con la actividad o el acceso del sospechoso a un área.
     if is_true:
         return f"Se registró actividad reciente de alguien similar a {culprit} en {area}."
     else:
@@ -42,7 +40,6 @@ def clue_access(area, culprit, is_true):
         return f"Al parecer {other} estuvo en {area}, aunque no hay certeza."
 
 def clue_social(area, culprit, is_true):
-    # Pista basada en testimonios o rumores sociales.
     if is_true:
         return f"Un testigo vio a alguien con características de {culprit} cerca de {area}."
     else:
@@ -50,7 +47,6 @@ def clue_social(area, culprit, is_true):
         return f"Se rumorea que {other} estaba cerca de {area}, pero no es seguro."
 
 def clue_item(area, weapon, is_true):
-    # Pista relacionada con objetos o herramientas del arma.
     if is_true:
         return f"Se encontró un objeto relacionado con {weapon} dentro de {area}."
     else:
@@ -58,19 +54,16 @@ def clue_item(area, weapon, is_true):
         return f"Hay un objeto que parece vinculado a un {other}, aunque no es definitivo."
 
 def generate_clues(culprit, weapon, location, seed=None):
-    # Genera el conjunto completo de pistas (verdaderas y falsas).
     if seed is not None:
         random.seed(seed)
     clues_by_area = {area: [] for area in AREAS}
 
-    # Asegura que haya 4 pistas verdaderas clave
     clues_by_area[location].append({"text": clue_physical(location, weapon, True), "true": True})
     clues_by_area[location].append({"text": clue_item(location, weapon, True), "true": True})
     random_area = random.choice([a for a in AREAS if a != location])
     clues_by_area[random_area].append({"text": clue_access(random_area, culprit, True), "true": True})
     clues_by_area[random_area].append({"text": clue_social(random_area, culprit, True), "true": True})
 
-    # Agrega 8 pistas falsas para la dificultad
     for _ in range(8):
         tpl = random.choice([clue_physical, clue_access, clue_social, clue_item])
         area = random.choice(AREAS)
@@ -80,7 +73,6 @@ def generate_clues(culprit, weapon, location, seed=None):
             txt = tpl(area, culprit, False)
         clues_by_area[area].append({"text": txt, "true": False})
 
-    # Mezclar y devolver las pistas
     for area in clues_by_area:
         random.shuffle(clues_by_area[area])
     return clues_by_area
@@ -93,7 +85,7 @@ class ClueGameGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Clue: Night City Protocol")
-        self.root.geometry("850x700") # Tamaño inicial de la ventana
+        self.root.geometry("850x700") 
         self.root.config(bg="#101010")
 
         # Configuración de estilos Cyberpunk
@@ -114,86 +106,73 @@ class ClueGameGUI:
         self.initialize_game()
         
         # ======== Barra de estado (Abajo, Izquierda) ========
-        # Frame contenedor anclado al bottom del root para ocupar todo el ancho.
         status_frame = tk.Frame(root, bg="#101010", height=20)
         status_frame.pack(side="bottom", fill="x")
         
         self.status_var = tk.StringVar(value="Turno: 0 / 10")
-        # La etiqueta se ancla a la IZQUIERDA del status_frame, solucionando el problema del centrado del contador.
         self.status_bar = tk.Label(status_frame, textvariable=self.status_var, bg="#101010", fg="#00ffe7",
                                    font=("Consolas", 11), anchor="w", padx=10) 
         self.status_bar.pack(side="left") 
 
         # ======== Scroll General (Canvas y Scrollbar) ========
-        # El Canvas ocupa todo el espacio restante sobre la barra de estado.
         self.main_canvas = tk.Canvas(root, bg="#101010", highlightthickness=0)
         self.scrollbar = ttk.Scrollbar(root, orient="vertical", command=self.main_canvas.yview)
         
-        # El frame que contiene todo el contenido real (es la ventana dentro del canvas).
         self.scrollable_frame = tk.Frame(self.main_canvas, bg="#101010") 
 
         # Lógica para gestionar el Scroll y el Centrado Dinámico
         def on_frame_configure(event):
-            # 1. Ajuste del Bounding Box para el Scroll y Centrado
             bbox = self.main_canvas.bbox("all")
-            # Forzamos la anchura del frame a la anchura actual del canvas para evitar scroll horizontal.
             self.main_canvas.itemconfigure(self.frame_id, width=self.main_canvas.winfo_width())
             
-            # Si el contenido es menor que el canvas, ajustamos el scrollregion a la altura del canvas.
-            # Esto permite que el grid de centrado tenga el espacio completo para trabajar.
             if bbox[3] < self.main_canvas.winfo_height():
                  self.main_canvas.configure(scrollregion=(bbox[0], bbox[1], bbox[2], self.main_canvas.winfo_height()))
-            # Si el contenido es más grande, se usa el tamaño real para permitir el scroll normal.
             else:
                  self.main_canvas.configure(scrollregion=bbox)
 
-        # El binding en el frame detecta cambios en el tamaño del contenido.
         self.scrollable_frame.bind("<Configure>", on_frame_configure)
         
-        # Coloca el scrollable_frame dentro del canvas y guarda su ID.
         self.frame_id = self.main_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         
-        # El binding en el canvas detecta cuando la ventana principal se redimensiona
-        # y llama a la función de configuración para reajustar el scroll y el centrado.
         def on_canvas_resize(event):
              on_frame_configure(event)
         self.main_canvas.bind('<Configure>', on_canvas_resize)
 
         self.main_canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        # Empaquetado final del Canvas y la Scrollbar.
         self.main_canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
 
-        # Habilita el scroll con la rueda del ratón.
         self.main_canvas.bind_all("<MouseWheel>", lambda e: self.main_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
 
-        # ======== Contenedor Principal (Marco de Centrado GRID) ========
+        # ======== Contenedor Principal (Dentro del scrollable frame) ========
         self.container = self.scrollable_frame
         
-        # Marco que ocupa todo el espacio del scrollable_frame.
-        self.main_content_frame = tk.Frame(self.container, bg="#101010")
-        self.main_content_frame.pack(fill="both", expand=True)
-        
-        # Configuración de pesos: Clave para el centrado DINÁMICO.
-        self.main_content_frame.grid_columnconfigure(0, weight=1) # Expande la columna horizontalmente
-        self.main_content_frame.grid_rowconfigure(0, weight=1)    # Fila superior vacía (empuje vertical)
-        self.main_content_frame.grid_rowconfigure(3, weight=1)    # Fila inferior vacía (empuje vertical)
-
-        # ======== Logo (Se define como widget de GRID) ========
+        # ======== Logo (AHORA PERMANENTEMENTE VISIBLE) ========
+        # El logo es el primer elemento empaquetado, se mantiene fijo arriba en todas las vistas.
         logo_path = os.path.join("Images", "Logo Clue.png")
         if os.path.exists(logo_path):
             img = Image.open(logo_path)
             img.thumbnail((450, 200))
             logo_img = ImageTk.PhotoImage(img)
-            self.logo = tk.Label(self.main_content_frame, image=logo_img, bg="#101010")
+            self.logo = tk.Label(self.container, image=logo_img, bg="#101010")
             self.logo.image = logo_img
+            self.logo.pack(pady=10) 
         else:
-            self.logo = tk.Label(self.main_content_frame, text="CLUE: Night City Protocol", font=("Consolas", 20, "bold"),
+            self.logo = tk.Label(self.container, text="CLUE: Night City Protocol", font=("Consolas", 20, "bold"),
                      fg="#00ffe7", bg="#101010")
+            self.logo.pack(pady=10) 
+        # =========================================================
 
+        # *** Marco de Centrado Dinámico (Grid) ***
+        # Este marco contiene el MENÚ y se muestra solo en la pantalla "Menu".
+        self.main_content_frame = tk.Frame(self.container, bg="#101010")
+        
+        self.main_content_frame.grid_columnconfigure(0, weight=1)
+        self.main_content_frame.grid_rowconfigure(0, weight=1)    # Fila superior de empuje
+        self.main_content_frame.grid_rowconfigure(3, weight=1)    # Fila inferior de empuje
 
-        # ======== Frame del Menú (Se define como widget de GRID) ========
+        # ======== Frame del Menú (Contenido que se centra) ========
         self.menu_frame = tk.Frame(self.main_content_frame, bg="#101010")
         
         # Contenido del menú (texto de introducción y botones)
@@ -207,14 +186,12 @@ class ClueGameGUI:
         self.create_investigation_screen()
         self.create_acusacion_screen()
         
-        # Muestra la pantalla de menú inicialmente.
         self.show_frame("Menu") 
     
     # ========================
     # INICIALIZAR JUEGO
     # ========================
     def initialize_game(self):
-        # Establece la solución secreta del caso al inicio.
         self.culprit = random.choice(SUSPECTS)
         self.weapon = random.choice(WEAPONS)
         self.location = random.choice(AREAS)
@@ -228,7 +205,7 @@ class ClueGameGUI:
     # ========================
 
     def create_investigation_screen(self):
-        # Frame para la pantalla de investigación (usa pack como gestor)
+        # Frame para la pantalla de investigación
         self.invest_frame = tk.Frame(self.container, bg="#101010") 
 
         # Área de texto para mostrar las pistas
@@ -248,7 +225,7 @@ class ClueGameGUI:
         ttk.Button(btn_frame, text="Volver al Menú", command=lambda: self.show_frame("Menu")).grid(row=0, column=3, padx=5)
 
     def create_acusacion_screen(self):
-        # Frame para la pantalla de acusación (usa pack como gestor)
+        # Frame para la pantalla de acusación
         self.acusacion_frame = tk.Frame(self.container, bg="#0f0f1a")
         tk.Label(self.acusacion_frame, text="Hacer Acusación", fg="#00ffe7",
                  bg="#0f0f1a", font=("Consolas", 16, "bold")).pack(pady=10)
@@ -286,28 +263,29 @@ class ClueGameGUI:
         for f in [self.invest_frame, self.acusacion_frame]:
             f.pack_forget()
             
-        # 2. Oculta el marco de centrado (pack) y sus contenidos (grid)
+        # 2. Oculta el marco de centrado (pack) y su contenido (grid)
         self.main_content_frame.pack_forget()
-        self.logo.grid_forget()
         self.menu_frame.grid_forget()
+
+        # El self.logo ya no se oculta porque está empaquetado permanentemente.
 
         if name == "Menu":
             # Muestra el marco de centrado GRID (permite la dinámica).
             self.main_content_frame.pack(fill="both", expand=True)
             
-            # Posiciona el logo y el menú en las filas centrales del grid.
-            self.logo.grid(row=1, column=0, pady=(10, 5))
+            # Posiciona el menú en la fila central del grid (Fila 2).
+            # La Fila 1 (donde estaba el logo) y el logo ya no son manipulados por grid.
             self.menu_frame.grid(row=2, column=0, pady=10)
             
             self.main_canvas.yview_moveto(0) # Va al inicio del scroll.
 
         elif name == "Investigation":
-            # Muestra la pantalla de investigación, ocupando todo el espacio.
+            # Muestra la pantalla de investigación, justo debajo del logo.
             self.invest_frame.pack(fill="both", expand=True)
             
         elif name == "Accusacion":
             self.update_acusacion_pistas()
-            # Muestra la pantalla de acusación, ocupando todo el espacio.
+            # Muestra la pantalla de acusación, justo debajo del logo.
             self.acusacion_frame.pack(fill="both", expand=True)
 
     # ========================
@@ -461,7 +439,6 @@ class ClueGameGUI:
         result_window.config(bg="#101010")
         result_window.grab_set()
         
-        # ... (configuración y contenido de la ventana de resultado)
         title_text = "¡Victoria Detective!" if correct else "Caso Fallido"
         title_color = "#00ff00" if correct else "#ff4040"
 
