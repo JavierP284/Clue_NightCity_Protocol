@@ -95,6 +95,7 @@ class ClueGameGUI:
         self.root.geometry("850x700")
         self.root.config(bg="#101010")
 
+        # ======== Estilos Cyberpunk ========
         style = ttk.Style()
         style.theme_use('clam')
         style.configure("TButton",
@@ -109,13 +110,34 @@ class ClueGameGUI:
                   background=[('active', '#00ffe7')],
                   foreground=[('active', '#101010')])
 
+        # ======== Inicializar Juego ========
         self.initialize_game()
 
-        # Contenedor principal
-        self.container = tk.Frame(root, bg="#101010")
-        self.container.pack(fill="both", expand=True)
+        # ======== Scroll General ========
+        self.main_canvas = tk.Canvas(root, bg="#101010", highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(root, orient="vertical", command=self.main_canvas.yview)
+        self.scrollable_frame = tk.Frame(self.main_canvas, bg="#101010")
 
-        # Logo
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.main_canvas.configure(
+                scrollregion=self.main_canvas.bbox("all")
+            )
+        )
+
+        self.main_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.main_canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.main_canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+        # Permitir scroll con rueda del ratón
+        self.main_canvas.bind_all("<MouseWheel>", lambda e: self.main_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+        # ======== Contenedor Principal ========
+        self.container = self.scrollable_frame
+
+        # ======== Logo ========
         logo_path = os.path.join("Images", "Logo Clue.png")
         if os.path.exists(logo_path):
             img = Image.open(logo_path)
@@ -128,19 +150,26 @@ class ClueGameGUI:
             tk.Label(self.container, text="CLUE: Night City Protocol", font=("Consolas", 20, "bold"),
                      fg="#00ffe7", bg="#101010").pack(pady=10)
 
-        # Mini barra de estado
+        # ======== Menú centrado ========
+        self.menu_frame = tk.Frame(self.container, bg="#101010")
+        self.menu_frame.place(relx=0.5, rely=0.5, anchor="center")  # <-- Centrado absoluto
+
+        tk.Label(self.menu_frame, text=self.get_intro_text(), fg="#00ffe7", bg="#101010",
+                 font=("Consolas", 12), justify="left").pack(pady=10)
+        ttk.Button(self.menu_frame, text="Comenzar Investigación", command=lambda: self.show_frame("Investigation")).pack(pady=5)
+        ttk.Button(self.menu_frame, text="Hacer Acusación", command=lambda: self.show_frame("Accusacion")).pack(pady=5)
+        ttk.Button(self.menu_frame, text="Salir del Juego", command=self.root.quit).pack(pady=5)
+
+        # ======== Barra de estado (abajo izquierda) ========
         self.status_var = tk.StringVar(value="Turno: 0 / 10")
         self.status_bar = tk.Label(root, textvariable=self.status_var, bg="#101010", fg="#00ffe7",
                                    font=("Consolas", 11), anchor="w")
-        self.status_bar.pack(fill="x")
+        self.status_bar.pack(side="bottom", fill="x")
 
-        # Crear todas las secciones
-        self.create_menu_screen()
+        # ======== Crear pantallas ========
         self.create_investigation_screen()
         self.create_acusacion_screen()
-
         self.show_frame("Menu")
-
     # ========================
     # INICIALIZAR JUEGO
     # ========================
